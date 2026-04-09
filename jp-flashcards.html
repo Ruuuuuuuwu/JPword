@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日語單字卡</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 自訂顏色擴展與基礎設定 */
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Zen+Maru+Gothic:wght@500;700&display=swap');
+
+        :root {
+            --bg-main: #14101e;
+            --bg-card: #20172d;
+            --border-color: #3b2b4d;
+            --text-pink: #f9b6c8;
+            --text-muted: #8b7d9e;
+            --text-romaji: #b1a4d0;
+            --btn-bg: #1c1527;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            font-family: 'Noto Sans TC', sans-serif;
+            color: white;
+            user-select: none;
+        }
+
+        .jp-text {
+            font-family: 'Zen Maru Gothic', sans-serif; /* 較圓潤的日文字體 */
+        }
+
+        /* 3D 翻轉卡片效果 */
+        .perspective-1000 {
+            perspective: 1000px;
+        }
+
+        .transform-style-3d {
+            transform-style: preserve-3d;
+            transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+        }
+
+        .backface-hidden {
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+        }
+
+        .rotate-y-180 {
+            transform: rotateY(180deg);
+        }
+
+        /* 隱藏捲軸但允許滾動 */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <!-- App 容器 -->
+    <div class="w-full max-w-md mx-auto flex flex-col gap-6">
+        
+        <!-- Header -->
+        <div class="text-center space-y-2">
+            <h2 class="text-[#c16986] text-xs font-bold tracking-widest uppercase">Session 2 - AI の 日語家教</h2>
+            <h1 class="text-3xl font-bold text-[#f9b6c8] tracking-wide jp-text">日語單字卡</h1>
+        </div>
+
+        <!-- 分類選擇器 -->
+        <div class="flex justify-center gap-3" id="category-container">
+            <!-- 分類按鈕將由 JS 動態生成 -->
+        </div>
+
+        <!-- 進度指示器 -->
+        <div class="flex flex-col items-center gap-3">
+            <div class="flex gap-2" id="progress-dots">
+                <!-- 點點由 JS 生成 -->
+            </div>
+            <div class="flex items-center gap-3 w-48">
+                <div class="h-1 flex-1 bg-[#2a1e3b] rounded-full overflow-hidden">
+                    <div id="progress-bar" class="h-full bg-[#f9b6c8] rounded-full transition-all duration-300 w-1/5"></div>
+                </div>
+                <span id="progress-text" class="text-[#8b7d9e] text-sm font-mono tracking-widest">1 / 5</span>
+            </div>
+        </div>
+
+        <!-- 單字卡片區 (3D 翻轉容器) -->
+        <div class="w-full aspect-[4/3] perspective-1000 cursor-pointer" onclick="flipCard()">
+            <div id="flashcard" class="w-full h-full relative transform-style-3d ring-1 ring-[#3b2b4d] rounded-3xl shadow-xl">
+                
+                <!-- 卡片正面 -->
+                <div class="absolute inset-0 w-full h-full bg-[#20172d] rounded-3xl backface-hidden flex flex-col items-center justify-between py-8 px-6">
+                    <!-- 頂部小標籤 -->
+                    <div class="bg-[#2a1e3b] text-[#a89bc2] px-4 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 category-label">
+                        🙋‍♀️ 打招呼
+                    </div>
+
+                    <!-- 主要內容區 -->
+                    <div class="flex flex-col items-center justify-center flex-1 gap-4">
+                        <div id="card-jp" class="text-6xl font-bold text-[#f9b6c8] jp-text tracking-wider">おはよう</div>
+                        <div id="card-romaji" class="text-xl font-medium tracking-widest text-[#b1a4d0]">ohayou</div>
+                    </div>
+
+                    <!-- 底部提示 -->
+                    <div class="text-[#64567c] text-sm font-medium">
+                        ← 點卡片翻面看意思 →
+                    </div>
+                </div>
+
+                <!-- 卡片背面 -->
+                <div class="absolute inset-0 w-full h-full bg-[#20172d] rounded-3xl backface-hidden rotate-y-180 flex flex-col items-center justify-between py-8 px-6">
+                    <div class="bg-[#2a1e3b] text-[#a89bc2] px-4 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 category-label">
+                        🙋‍♀️ 打招呼
+                    </div>
+
+                    <div class="flex flex-col items-center justify-center flex-1">
+                        <div class="text-[#8b7d9e] text-lg mb-2">中文意思</div>
+                        <div id="card-zh" class="text-5xl font-bold text-white tracking-widest">早安</div>
+                    </div>
+
+                    <div class="text-[#64567c] text-sm font-medium">
+                        ← 點卡片翻回日文 →
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- 底部控制項 -->
+        <div class="flex flex-col items-center gap-6 mt-2">
+            
+            <!-- 語速控制 -->
+            <div class="flex items-center gap-2 bg-[#1c1527] p-1 rounded-xl ring-1 ring-[#3b2b4d]">
+                <button onclick="setSpeed(0.5, this)" class="speed-btn px-4 py-1.5 rounded-lg text-[#8b7d9e] text-sm hover:text-white transition-colors flex items-center gap-1">
+                    慢速 🐢
+                </button>
+                <button onclick="setSpeed(0.9, this)" class="speed-btn px-4 py-1.5 rounded-lg text-[#b1a4d0] ring-1 ring-[#5a4675] bg-[#2a1e3b] text-sm transition-colors active-speed">
+                    普通
+                </button>
+                <button onclick="setSpeed(1.5, this)" class="speed-btn px-4 py-1.5 rounded-lg text-[#8b7d9e] text-sm hover:text-white transition-colors flex items-center gap-1">
+                    快速 🐇
+                </button>
+            </div>
+
+            <!-- 導覽與發音按鈕 -->
+            <div class="flex items-center justify-center gap-6 w-full">
+                <!-- 上一個 -->
+                <button onclick="prevCard()" class="w-14 h-14 rounded-2xl flex items-center justify-center bg-[#1c1527] ring-1 ring-[#3b2b4d] hover:bg-[#2a1e3b] text-[#8b7d9e] transition-colors">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                </button>
+
+                <!-- 播放發音 -->
+                <button onclick="playAudio()" class="w-20 h-20 rounded-full flex items-center justify-center bg-[#2a1e3b] ring-2 ring-[#5a4675] hover:ring-[#f9b6c8] hover:bg-[#35264a] text-[#f9b6c8] transition-all transform hover:scale-105 shadow-[0_0_20px_rgba(249,182,200,0.1)]">
+                    <!-- 使用漸層色和可愛的喇叭圖示 -->
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="#f9b6c8" stroke="none"></polygon>
+                        <path d="M15.54 8.46a5 5 0 0 1 0 7.07" fill="none" stroke="#60a5fa" stroke-width="2"></path>
+                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14" fill="none" stroke="#34d399" stroke-width="2"></path>
+                    </svg>
+                </button>
+
+                <!-- 下一個 -->
+                <button onclick="nextCard()" class="w-14 h-14 rounded-2xl flex items-center justify-center bg-[#1c1527] ring-1 ring-[#3b2b4d] hover:bg-[#2a1e3b] text-[#8b7d9e] hover:text-white transition-colors focus:ring-1 focus:ring-white">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- 單字資料庫 ---
+        const vocabData = {
+            greetings: {
+                id: 'greetings',
+                name: '打招呼',
+                icon: '🙋‍♀️',
+                words: [
+                    { jp: 'おはよう', romaji: 'ohayou', zh: '早安' },
+                    { jp: 'こんにちは', romaji: 'konnichiwa', zh: '你好 (白天)' },
+                    { jp: 'こんばんは', romaji: 'konbanwa', zh: '晚上好' },
+                    { jp: 'ありがとう', romaji: 'arigatou', zh: '謝謝' },
+                    { jp: 'さようなら', romaji: 'sayounara', zh: '再見' }
+                ]
+            },
+            numbers: {
+                id: 'numbers',
+                name: '數字',
+                icon: '🔢',
+                words: [
+                    { jp: 'いち', romaji: 'ichi', zh: '一' },
+                    { jp: 'に', romaji: 'ni', zh: '二' },
+                    { jp: 'さん', romaji: 'san', zh: '三' },
+                    { jp: 'よん', romaji: 'yon', zh: '四' },
+                    { jp: 'ご', romaji: 'go', zh: '五' }
+                ]
+            },
+            daily: {
+                id: 'daily',
+                name: '日常',
+                icon: '🍙',
+                words: [
+                    { jp: 'おいしい', romaji: 'oishii', zh: '好吃的' },
+                    { jp: 'かわいい', romaji: 'kawaii', zh: '可愛的' },
+                    { jp: 'すごい', romaji: 'sugoi', zh: '厲害的' },
+                    { jp: 'やばい', romaji: 'yabai', zh: '糟糕 / 極好的' }
+                ]
+            }
+        };
+
+        // --- 狀態管理 ---
+        let currentCategoryKey = 'greetings';
+        let currentIndex = 0; // index within the shuffled order
+        let isFlipped = false;
+        let playbackRate = 0.9; // 預設普通語速
+
+        // --- 隨機洗牌順序 (每個分類各自一套) ---
+        const shuffledOrdersByCategory = {};
+
+        function shuffleInPlace(arr) {
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function ensureOrder(categoryKey, reshuffle = false) {
+            const total = vocabData[categoryKey].words.length;
+            const hasValid = Array.isArray(shuffledOrdersByCategory[categoryKey]) && shuffledOrdersByCategory[categoryKey].length === total;
+            if (!hasValid || reshuffle) {
+                shuffledOrdersByCategory[categoryKey] = shuffleInPlace([...Array(total).keys()]);
+            }
+            return shuffledOrdersByCategory[categoryKey];
+        }
+
+        function getCurrentWord() {
+            const order = ensureOrder(currentCategoryKey);
+            const idx = order[currentIndex];
+            return vocabData[currentCategoryKey].words[idx];
+        }
+
+        // --- DOM 元素 ---
+        const flashcardEl = document.getElementById('flashcard');
+        const cardJpEl = document.getElementById('card-jp');
+        const cardRomajiEl = document.getElementById('card-romaji');
+        const cardZhEl = document.getElementById('card-zh');
+        const categoryLabels = document.querySelectorAll('.category-label');
+        const categoryContainer = document.getElementById('category-container');
+        const progressDotsEl = document.getElementById('progress-dots');
+        const progressBarEl = document.getElementById('progress-bar');
+        const progressTextEl = document.getElementById('progress-text');
+
+        // --- 初始化 ---
+        function init() {
+            ensureOrder(currentCategoryKey, true);
+            renderCategoryButtons();
+            updateCardContent();
+            updateProgress();
+        }
+
+        // --- 渲染分類按鈕 ---
+        function renderCategoryButtons() {
+            categoryContainer.innerHTML = '';
+            Object.keys(vocabData).forEach(key => {
+                const cat = vocabData[key];
+                const isActive = key === currentCategoryKey;
+                
+                const btn = document.createElement('button');
+                btn.className = `px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 
+                    ${isActive 
+                        ? 'bg-[#2a1e3b] text-[#f9b6c8] ring-1 ring-[#f9b6c8] shadow-[0_0_10px_rgba(249,182,200,0.2)]' 
+                        : 'bg-[#1c1527] text-[#8b7d9e] ring-1 ring-[#3b2b4d] hover:bg-[#251b34]'}`;
+                btn.innerHTML = `<span>${cat.icon}</span> <span>${cat.name}</span>`;
+                btn.onclick = () => switchCategory(key);
+                categoryContainer.appendChild(btn);
+            });
+        }
+
+        // --- 切換分類 ---
+        function switchCategory(key) {
+            if (currentCategoryKey === key) return;
+            currentCategoryKey = key;
+            currentIndex = 0;
+            ensureOrder(currentCategoryKey, true);
+            if (isFlipped) flipCard(false); // 翻回正面
+            
+            renderCategoryButtons();
+            updateCardContent();
+            updateProgress();
+        }
+
+        // --- 更新卡片內容 ---
+        function updateCardContent() {
+            const currentCat = vocabData[currentCategoryKey];
+            const currentWord = getCurrentWord();
+
+            // 更新標籤
+            categoryLabels.forEach(label => {
+                label.innerHTML = `${currentCat.icon} ${currentCat.name}`;
+            });
+
+            // 更新文字 (加入淡入動畫效果)
+            cardJpEl.style.opacity = 0;
+            cardRomajiEl.style.opacity = 0;
+            cardZhEl.style.opacity = 0;
+
+            setTimeout(() => {
+                cardJpEl.textContent = currentWord.jp;
+                cardRomajiEl.textContent = currentWord.romaji;
+                cardZhEl.textContent = currentWord.zh;
+
+                // 根據字數稍微調整字體大小，避免太長超出卡片
+                if(currentWord.jp.length > 6) {
+                    cardJpEl.className = "text-4xl sm:text-5xl font-bold text-[#f9b6c8] jp-text tracking-wider";
+                } else {
+                    cardJpEl.className = "text-5xl sm:text-6xl font-bold text-[#f9b6c8] jp-text tracking-wider";
+                }
+
+                cardJpEl.style.opacity = 1;
+                cardRomajiEl.style.opacity = 1;
+                cardZhEl.style.opacity = 1;
+            }, 150);
+        }
+
+        // --- 更新進度條與點點 ---
+        function updateProgress() {
+            const currentCat = vocabData[currentCategoryKey];
+            const total = currentCat.words.length;
+            const current = currentIndex + 1;
+
+            // 文字進度
+            progressTextEl.textContent = `${current} / ${total}`;
+
+            // 長條進度條
+            progressBarEl.style.width = `${(current / total) * 100}%`;
+
+            // 圓點進度
+            progressDotsEl.innerHTML = '';
+            for (let i = 0; i < total; i++) {
+                const dot = document.createElement('div');
+                dot.className = `w-2 h-2 rounded-full transition-colors duration-300 ${i === currentIndex ? 'bg-[#f9b6c8] shadow-[0_0_5px_#f9b6c8]' : 'bg-[#3b2b4d]'}`;
+                progressDotsEl.appendChild(dot);
+            }
+        }
+
+        // --- 翻牌動作 ---
+        function flipCard(forceState = null) {
+            if (forceState !== null) {
+                isFlipped = forceState;
+            } else {
+                isFlipped = !isFlipped;
+            }
+
+            if (isFlipped) {
+                flashcardEl.classList.add('rotate-y-180');
+            } else {
+                flashcardEl.classList.remove('rotate-y-180');
+            }
+        }
+
+        // --- 上一張 / 下一張 (依洗牌順序) ---
+        function nextCard() {
+            const total = vocabData[currentCategoryKey].words.length;
+            if (currentIndex >= total - 1) {
+                ensureOrder(currentCategoryKey, true); // 跑完一輪就重新洗牌
+                currentIndex = 0;
+            } else {
+                currentIndex = currentIndex + 1;
+            }
+            if (isFlipped) flipCard(false);
+            updateCardContent();
+            updateProgress();
+        }
+
+        function prevCard() {
+            const total = vocabData[currentCategoryKey].words.length;
+            if (currentIndex <= 0) {
+                ensureOrder(currentCategoryKey, true); // 往回繞一圈也重新洗牌
+                currentIndex = total - 1;
+            } else {
+                currentIndex = currentIndex - 1;
+            }
+            if (isFlipped) flipCard(false);
+            updateCardContent();
+            updateProgress();
+        }
+
+        // --- 設置語速 ---
+        function setSpeed(speed, btnElement) {
+            playbackRate = speed;
+            
+            // 更新按鈕樣式
+            document.querySelectorAll('.speed-btn').forEach(btn => {
+                btn.classList.remove('ring-1', 'ring-[#5a4675]', 'bg-[#2a1e3b]', 'text-[#b1a4d0]', 'active-speed');
+                btn.classList.add('text-[#8b7d9e]');
+            });
+
+            btnElement.classList.add('ring-1', 'ring-[#5a4675]', 'bg-[#2a1e3b]', 'text-[#b1a4d0]', 'active-speed');
+            btnElement.classList.remove('text-[#8b7d9e]');
+        }
+
+        // --- 語音合成 (TTS) 播放 ---
+        function playAudio() {
+            // 確保瀏覽器支援
+            if ('speechSynthesis' in window) {
+                const currentWord = getCurrentWord().jp;
+                const utterance = new SpeechSynthesisUtterance(currentWord);
+                
+                utterance.lang = 'ja-JP'; // 設定為日文
+                utterance.rate = playbackRate; // 語速
+                utterance.pitch = 1.1; // 稍微調高音調，聽起來比較有活力
+
+                // 取消正在播放的語音
+                window.speechSynthesis.cancel();
+                window.speechSynthesis.speak(utterance);
+            } else {
+                alert("抱歉，您的瀏覽器不支援語音功能。");
+            }
+        }
+
+        // 啟動應用
+        init();
+
+        // 支援鍵盤左右鍵切換、空白鍵翻轉
+        document.addEventListener('keydown', (e) => {
+            if(e.key === 'ArrowRight') nextCard();
+            if(e.key === 'ArrowLeft') prevCard();
+            if(e.key === ' ' || e.key === 'Enter') {
+                e.preventDefault();
+                flipCard();
+            }
+        });
+    </script>
+</body>
+</html>
